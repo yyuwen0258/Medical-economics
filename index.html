@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>互動式經濟學概念儀表板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals -->
+    <!-- Application Structure Plan: 本應用採用主題式儀表板結構，分為三大區塊：經濟學核心概念、醫療市場獨特性、統計分析工具。頂部設有導覽列，讓使用者可以自由切換主題，而非線性地閱讀。此結構的目的是將密集的文字資訊拆解成易於互動和吸收的模組。例如，「經濟學概念」使用可點擊的卡片來鼓勵主動探索；「醫療市場」透過並排欄位比較不同特性；「統計工具」則利用互動圖表將抽象概念具象化。這種非線性的、以使用者為中心的設計，能有效提升學習動機與理解效率。 -->
+    <!-- Visualization & Content Choices: 1. 生產可能曲線 (PPC): 目標(組織) -> 圖表(Chart.js 散點圖) -> 互動(滑鼠懸停顯示點位狀態) -> 理由(視覺化比純文字更能解釋效率、無效率和無法達成的概念) -> 方法(Chart.js)。 2. 需求與供給: 目標(告知) -> 圖表(Chart.js 線圖) -> 互動(滑鼠懸停於交叉點突顯均衡點) -> 理由(此為經典經濟學圖表，是理解市場均衡的關鍵) -> 方法(Chart.js)。 3. 市場結構: 目標(比較) -> 呈現(HTML 表格) -> 互動(點擊高亮) -> 理由(表格最適合比較多個項目的結構化特性) -> 方法(HTML/JS)。 4. 相關性與迴歸: 目標(關係) -> 圖表(Chart.js 散點圖) -> 互動(按鈕切換迴歸線顯示) -> 理由(將變數間的抽象關係具體化) -> 方法(Chart.js)。 所有選擇均為提升互動性與理解度，並確保無 SVG/Mermaid。 -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #FDFBF6;
+            color: #3C3633;
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: #E0A75E;
+            border-bottom-color: #E0A75E;
+        }
+        .card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .section-content {
+            display: none;
+        }
+        .section-content.active {
+            display: block;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .tab-btn.active {
+            background-color: #E0A75E;
+            color: #FFFFFF;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-[#ECE3CE]/80 backdrop-blur-sm sticky top-0 z-50 shadow-md">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <h1 class="text-xl md:text-2xl font-bold text-[#735F32]">經濟學互動儀表板</h1>
+            <div class="hidden md:flex space-x-8">
+                <a href="#concepts" class="nav-link active font-semibold pb-1" data-section="concepts">核心概念</a>
+                <a href="#healthcare" class="nav-link font-semibold pb-1" data-section="healthcare">醫療市場</a>
+                <a href="#stats" class="nav-link font-semibold pb-1" data-section="stats">統計工具</a>
+            </div>
+            <div class="md:hidden">
+                <select id="mobile-nav" class="bg-white border border-gray-300 rounded-md py-2 px-3 text-[#3C3633] focus:outline-none focus:ring-2 focus:ring-[#E0A75E]">
+                    <option value="concepts">核心概念</option>
+                    <option value="healthcare">醫療市場</option>
+                    <option value="stats">統計工具</option>
+                </select>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-6 py-8 md:py-12">
+        
+        <section id="concepts" class="section-content active">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-[#AD8B73] mb-4">經濟學十大核心概念</h2>
+                <p class="max-w-3xl mx-auto text-lg text-gray-600">經濟學研究人類如何在有限資源下做出選擇。本區塊將透過互動卡片介紹十大基本原則，點擊卡片以深入了解每個概念的定義與實例。這些概念是理解所有經濟行為的基石。</p>
+            </div>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+                <!-- Concept Cards -->
+                <div class="card bg-white p-6 rounded-lg shadow-sm text-center cursor-pointer" data-concept="scarcity">
+                    <div class="text-4xl mb-3">⚖️</div><h3 class="text-xl font-semibold text-[#3C3633]">稀少性</h3>
+                </div>
+                <div class="card bg-white p-6 rounded-lg shadow-sm text-center cursor-pointer" data-concept="opportunity">
+                    <div class="text-4xl mb-3">🤔</div><h3 class="text-xl font-semibold text-[#3C3633]">機會成本</h3>
+                </div>
+                <div class="card bg-white p-6 rounded-lg shadow-sm text-center cursor-pointer" data-concept="ppc">
+                    <div class="text-4xl mb-3">📈</div><h3 class="text-xl font-semibold text-[#3C3633]">生產可能曲線</h3>
+                </div>
+                <div class="card bg-white p-6 rounded-lg shadow-sm text-center cursor-pointer" data-concept="demand">
+                    <div class="text-4xl mb-3">🛒</div><h3 class="text-xl font-semibold text-[#3C3633]">需求與供給</h3>
+                </div>
+                <div class="card bg-white p-6 rounded-lg shadow-sm text-center cursor-pointer" data-concept="equilibrium">
+                    <div class="text-4xl mb-3"> 🤝</div><h3 class="text-xl font-semibold text-[#3C3633]">市場均衡</h3>
+                </div>
+                <div class="card bg-white p-6 rounded-lg shadow-sm text-center cursor-pointer" data-concept="utility">
+                    <div class="text-4xl mb-3">😊</div><h3 class="text-xl font-semibold text-[#3C3633]">效用</h3>
+                </div>
+                 <div class="card bg-white p-6 rounded-lg shadow-sm text-center cursor-pointer" data-concept="elasticity">
+                    <div class="text-4xl mb-3">📏</div><h3 class="text-xl font-semibold text-[#3C3633]">彈性</h3>
+                </div>
+                <div class="card bg-white p-6 rounded-lg shadow-sm text-center cursor-pointer" data-concept="production">
+                    <div class="text-4xl mb-3">🏭</div><h3 class="text-xl font-semibold text-[#3C3633]">生產</h3>
+                </div>
+                 <div class="card bg-white p-6 rounded-lg shadow-sm text-center cursor-pointer" data-concept="market">
+                    <div class="text-4xl mb-3">🏛️</div><h3 class="text-xl font-semibold text-[#3C3633]">市場結構</h3>
+                </div>
+                <div class="card bg-white p-6 rounded-lg shadow-sm text-center cursor-pointer" data-concept="efficiency">
+                    <div class="text-4xl mb-3">🏆</div><h3 class="text-xl font-semibold text-[#3C3633]">經濟效率</h3>
+                </div>
+            </div>
+        </section>
+
+        <section id="healthcare" class="section-content">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-[#AD8B73] mb-4">醫療照護市場的獨特性</h2>
+                <p class="max-w-3xl mx-auto text-lg text-gray-600">醫療照護市場與一般商品市場有顯著不同，主要源於其固有的「不確定性」。本區塊將闡述醫療市場的四大核心特質，並透過新冠疫苗的實例，展示這些經濟概念如何應用於真實世界的情境中。</p>
+            </div>
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h3 class="font-bold text-xl mb-3 text-[#735F32]">1. 不確定性</h3>
+                    <p class="text-gray-600">消費者對自身健康、醫療需求、服務品質及最終費用都充滿不確定性。這促使人們購買醫療保險以分散風險。</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h3 class="font-bold text-xl mb-3 text-[#735F32]">2. 不完全資訊</h3>
+                    <p class="text-gray-600">醫病之間存在巨大的資訊落差。缺乏專業知識的病患只能信賴醫師的判斷，但即使是醫師，也無法保證診斷與治療結果的百分百確定性。</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h3 class="font-bold text-xl mb-3 text-[#735F32]">3. 外部性</h3>
+                    <p class="text-gray-600">個人行為的成本或效益，影響到他人。例如施打疫苗（正外部性）不僅保護自己，也間接保護社群；反之則可能傳播疾病（負外部性）。</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h3 class="font-bold text-xl mb-3 text-[#735F32]">4. 政府介入</h3>
+                    <p class="text-gray-600">為應對上述市場失靈，政府通常會介入，如核發執照、藥品管制、實施全民健保等，但也可能因此降低市場的競爭性。</p>
+                </div>
+            </div>
+            <div class="mt-12 bg-[#ECE3CE] p-6 rounded-lg">
+                <h4 class="font-bold text-2xl text-center mb-4 text-[#735F32]">實例觀察：新冠疫苗市場</h4>
+                <p class="text-center text-gray-700">台灣新冠疫苗的推展過程完美體現了醫療市場的四大特質：民眾因擔憂疫苗的<strong class="text-[#E0A75E]">不確定性</strong>而猶豫；政府資訊傳遞的<strong class="text-[#E0A75E]">不完全</strong>影響施打意願；接種行為產生了保護他人的<strong class="text-[#E0A75E]">正外部性</strong>；而整個疫苗的採購、分配與推廣，都展現了<strong class="text-[#E0A75E]">政府的強力介入</strong>。</p>
+            </div>
+        </section>
+
+        <section id="stats" class="section-content">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-[#AD8B73] mb-4">基本統計分析工具</h2>
+                <p class="max-w-3xl mx-auto text-lg text-gray-600">統計是經濟分析的語言。若沒有數據佐證，經濟理論僅是空談。本區塊介紹四種基礎的統計方法，從描述資料特性到分析變數關係，這些工具能幫助我們從數據中洞察經濟現象的規律與趨勢。</p>
+            </div>
+            <div class="flex justify-center mb-8">
+                <div class="flex space-x-2 bg-gray-200 p-1 rounded-lg">
+                    <button class="tab-btn px-4 py-2 text-sm font-medium rounded-md active" data-tab="desc">敘述統計</button>
+                    <button class="tab-btn px-4 py-2 text-sm font-medium rounded-md" data-tab="hypo">假設檢定</button>
+                    <button class="tab-btn px-4 py-2 text-sm font-medium rounded-md" data-tab="corr">相關性</button>
+                    <button class="tab-btn px-4 py-2 text-sm font-medium rounded-md" data-tab="reg">迴歸分析</button>
+                </div>
+            </div>
+            <div id="stats-content" class="bg-white p-6 rounded-lg shadow-sm">
+                <!-- Stats content will be injected here -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal -->
+    <div id="concept-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="p-6" id="modal-content">
+                <!-- Modal content injected here -->
+            </div>
+            <div class="bg-gray-100 px-6 py-4 text-right">
+                <button id="modal-close" class="bg-[#E0A75E] text-white px-4 py-2 rounded-lg hover:bg-[#c8924a] transition">關閉</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const sections = document.querySelectorAll('.section-content');
+            const navLinks = document.querySelectorAll('.nav-link');
+            const mobileNav = document.getElementById('mobile-nav');
+
+            function switchSection(sectionId) {
+                sections.forEach(section => {
+                    section.classList.toggle('active', section.id === sectionId);
+                });
+                navLinks.forEach(link => {
+                    link.classList.toggle('active', link.getAttribute('href') === '#' + sectionId);
+                });
+                if(mobileNav.value !== sectionId) {
+                    mobileNav.value = sectionId;
+                }
+                
+                if (sectionId === 'stats') {
+                    switchTab('desc');
+                }
+            }
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const sectionId = e.target.getAttribute('data-section');
+                    switchSection(sectionId);
+                    window.history.pushState(null, '', `#${sectionId}`);
+                });
+            });
+
+            mobileNav.addEventListener('change', (e) => {
+                switchSection(e.target.value);
+                window.history.pushState(null, '', `#${e.target.value}`);
+            });
+            
+            // Handle initial section based on URL hash
+            const initialSection = window.location.hash.substring(1) || 'concepts';
+            switchSection(initialSection);
+
+            // Modal logic
+            const modal = document.getElementById('concept-modal');
+            const modalContent = document.getElementById('modal-content');
+            const closeModalBtn = document.getElementById('modal-close');
+            const conceptCards = document.querySelectorAll('.card');
+
+            const conceptsData = {
+                scarcity: {
+                    title: '稀少性 (Scarcity)',
+                    content: `<p class="mb-4">當有限的資源無法滿足無窮的欲望時，即產生稀少性問題。這意味著「如果想要擁有更多某種東西時，意味著需要放棄其他東西。」</p><p class="font-semibold">例如：一天只有24小時，多花時間唸書就必須犧牲其他活動。</p>`,
+                },
+                opportunity: {
+                    title: '機會成本 (Opportunity Cost)',
+                    content: `<p class="mb-4">當你將有限的資源，選擇用於從事某種活動時，那麼你的機會成本就是你所必須放棄的其他活動中，會產生最大價值的那項活動的價值。</p><p class="font-semibold">例如：放棄家教1,440元的工作選擇便利商店打工，機會成本即為1,440元。</p>`,
+                },
+                ppc: {
+                    title: '生產可能曲線 (PPC)',
+                    content: `<p class="mb-4">這條曲線描繪了在既定資源下，兩種產品可被生產出來的最大產量之組合的軌跡。它能說明機會成本和取捨的概念。</p>
+                              <div class="chart-container"><canvas id="ppcChart"></canvas></div>
+                              <ul class="list-disc list-inside mt-4 text-sm">
+                                <li><strong class="text-green-600">綠色點:</strong> 線上任何一點都代表效率生產。</li>
+                                <li><strong class="text-yellow-600">黃色點:</strong> 線內代表無效率。</li>
+                                <li><strong class="text-red-600">紅色點:</strong> 線外則代表現有資源無法達到。</li>
+                              </ul>`,
+                    chart: () => {
+                        const ctx = document.getElementById('ppcChart').getContext('2d');
+                        new Chart(ctx, {
+                            type: 'scatter',
+                            data: {
+                                datasets: [{
+                                    label: '生產可能邊界',
+                                    data: [{x:0,y:10},{x:1,y:9.8},{x:2,y:9.5},{x:3,y:9},{x:4,y:8},{x:5,y:6.5},{x:6,y:4},{x:7,y:0}],
+                                    borderColor: '#AD8B73',
+                                    backgroundColor: '#AD8B73',
+                                    type: 'line',
+                                    fill: false,
+                                    showLine: true
+                                }, {
+                                    label: '效率點',
+                                    data: [{x: 3, y: 9}],
+                                    backgroundColor: 'rgb(22 163 74)'
+                                }, {
+                                    label: '無效率點',
+                                    data: [{x: 3, y: 5}],
+                                    backgroundColor: 'rgb(234 179 8)'
+                                }, {
+                                    label: '無法達成點',
+                                    data: [{x: 6, y: 8}],
+                                    backgroundColor: 'rgb(220 38 38)'
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: { x: { title: { display: true, text: '產品A' }}, y: { title: { display: true, text: '產品B' }}}
+                            }
+                        });
+                    }
+                },
+                demand: {
+                    title: '需求與供給 (Demand and Supply)',
+                    content: `<p class="mb-4"><b>需求</b>指商品價格與其需求量之間的關係（通常價格越高，需求量越低）。<b>供給</b>指商品價格與其供給量之間的關係（通常價格越高，供給量越高）。兩線交叉點即為市場均衡。</p>
+                              <div class="chart-container"><canvas id="sdChart"></canvas></div>`,
+                    chart: () => {
+                         const ctx = document.getElementById('sdChart').getContext('2d');
+                         new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: [100, 200, 300, 400, 450, 500, 600],
+                                datasets: [{
+                                    label: '需求線 (D)',
+                                    data: [5, 4, 3.5, 3.2, 3, 2.8, 2],
+                                    borderColor: 'rgb(59 130 246)',
+                                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                                    tension: 0.1
+                                }, {
+                                    label: '供給線 (S)',
+                                    data: [1, 2, 2.5, 2.8, 3, 3.2, 4],
+                                    borderColor: 'rgb(239 68 68)',
+                                    backgroundColor: 'rgba(239, 68, 68, 0.5)',
+                                    tension: 0.1
+                                }, {
+                                    label: '均衡點',
+                                    type: 'scatter',
+                                    data: [{x: 450, y: 3}],
+                                    backgroundColor: 'rgb(16, 185, 129)',
+                                    pointRadius: 6,
+                                    pointHoverRadius: 8
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: { x: { title: { display: true, text: '價格' }}, y: { title: { display: true, text: '數量' }}},
+                                tooltips: { mode: 'index', intersect: false },
+                                plugins: {
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function(context) {
+                                                if(context.dataset.label === '均衡點') {
+                                                    return `均衡價格: 450, 均衡數量: 3`;
+                                                }
+                                                return `${context.dataset.label}: ${context.formattedValue}`;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                },
+                equilibrium: {
+                    title: '市場均衡 (Market Equilibrium)',
+                    content: `<p class="mb-4">市場均衡是需求量等於供給量的情況，也就是需求曲線與供給曲線的交叉點。</p><p class="font-semibold">此時的價格（450元）稱為均衡價格，所對應的數量（3罐）稱為均衡數量。</p>`,
+                },
+                utility: {
+                    title: '效用 (Utility)',
+                    content: `<p class="mb-4">經濟學以「效用」這個指標來衡量消費者消費商品或服務所得到的享受或滿足程度。理性的人們會在所得限制下追求最大效用。</p><p class="font-semibold">邊際效用遞減法則：隨著消費量增加，總效用雖增加，但每多消費一單位所帶來的邊際效用會逐漸減少。</p>`,
+                },
+                elasticity: {
+                    title: '彈性 (Elasticity)',
+                    content: `<p class="mb-2">彈性衡量一個變數對另一個變數變動時的反應程度。</p>
+                              <ul class="list-disc list-inside space-y-2">
+                                <li><b>完全無彈性需求：</b>價格變動，需求量不變（如柴米油鹽）。</li>
+                                <li><b>完全有彈性需求：</b>價格一有變動，需求量無限制地變動（如唱KTV，可輕易換家）。</li>
+                              </ul>`
+                },
+                production: {
+                    title: '生產 (Production)',
+                    content: `<p class="mb-4">生產是廠商結合生產要素（勞力、土地、資本與企業能力）產出商品或服務的行為。</p><p class="font-semibold">相對於消費者追求最大的效用，經濟學假設生產者經營的目標為追求利潤極大 (profit maximization)。</p>`
+                },
+                market: {
+                    title: '市場結構 (Market Structure)',
+                    content: `<p class="mb-4">市場結構根據廠商數目、產品相似度與進出市場難易度分為四類：</p>
+                              <div class="overflow-x-auto">
+                                <table class="w-full text-sm text-left">
+                                  <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                    <tr><th class="px-4 py-2">市場類型</th><th class="px-4 py-2">特性</th><th class="px-4 py-2">範例</th></tr>
+                                  </thead>
+                                  <tbody>
+                                    <tr class="bg-white border-b"><td class="px-4 py-2 font-medium">完全競爭</td><td class="px-4 py-2">廠商眾多、產品同質、進出容易</td><td class="px-4 py-2">農作物</td></tr>
+                                    <tr class="bg-white border-b"><td class="px-4 py-2 font-medium">獨占性競爭</td><td class="px-4 py-2">廠商眾多、產品異質、進出容易</td><td class="px-4 py-2">餐廳</td></tr>
+                                    <tr class="bg-white border-b"><td class="px-4 py-2 font-medium">寡占</td><td class="px-4 py-2">廠商少數、進出困難</td><td class="px-4 py-2">電腦、汽車</td></tr>
+                                    <tr class="bg-white"><td class="px-4 py-2 font-medium">獨占</td><td class="px-4 py-2">僅一家、有進入障礙</td><td class="px-4 py-2">自來水公司</td></tr>
+                                  </tbody>
+                                </table>
+                              </div>`
+                },
+                efficiency: {
+                    title: '經濟效率 (Economic Efficiency)',
+                    content: `<p class="mb-4">經濟效率指追求效用極大的消費者與追求利潤極大的廠商，在市場資源配置下，使總剩餘（消費者剩餘與生產者剩餘的總和）達到最大。</p><p class="font-semibold">當市場達到經濟效率時，即達到「柏拉圖最適境界 (Pareto optimality)」。</p>`
+                }
+            };
+
+            conceptCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    const conceptId = card.getAttribute('data-concept');
+                    const data = conceptsData[conceptId];
+                    modalContent.innerHTML = `<h2 class="text-2xl font-bold mb-4">${data.title}</h2><div>${data.content}</div>`;
+                    modal.classList.remove('hidden');
+                    modal.classList.add('flex');
+                    if (data.chart) {
+                        // Delay chart rendering to ensure canvas is visible
+                        setTimeout(data.chart, 50);
+                    }
+                });
+            });
+
+            closeModalBtn.addEventListener('click', () => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                modalContent.innerHTML = '';
+            });
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                    modalContent.innerHTML = '';
+                }
+            });
+            
+            // Stats section tab logic
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            const statsContent = document.getElementById('stats-content');
+            let correlationChart = null;
+
+            const statsData = {
+                desc: {
+                    title: '敘述統計',
+                    content: `<p>旨在以統計量呈現所蒐集到的數據資料特性，將數據整理成有用資訊。</p>
+                              <div class="mt-4 grid md:grid-cols-2 gap-4">
+                                <div><h4 class="font-semibold">集中趨勢 (Central Tendency)</h4><p class="text-sm">描述一組數據組合的代表值，如平均數、中位數、眾數。</p></div>
+                                <div><h4 class="font-semibold">離散趨勢 (Dispersion)</h4><p class="text-sm">分析數值離平均數或中心呈現怎樣的分佈方式，如變異數、標準差。</p></div>
+                              </div>`
+                },
+                hypo: {
+                    title: '假設檢定',
+                    content: `<p>用於判斷不同人群之間在某些方面是否存在差異性。</p>
+                              <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                                <p><strong class="text-red-600">H0 (虛無假設):</strong> 想要反駁否定的假設（例：男性與女性平均每日抽菸數量<span class="font-bold">相同</span>）。</p>
+                                <p><strong class="text-green-600">H1 (對立假設):</strong> 肯定的假設（例：男性與女性平均每日抽菸數量<span class="font-bold">不同</span>）。</p>
+                                <p class="mt-2 text-sm">透過統計量計算，在可容許的錯誤機率下，判定虛無假設是否可被推翻。</p>
+                              </div>`
+                },
+                corr: {
+                    title: '相關性',
+                    content: `<p class="mb-2">用於分析兩個或兩個以上變數之間的相關程度，以相關係數衡量。<strong>重要提示：相關性並非是指因果關係。</strong></p>
+                              <div class="chart-container"><canvas id="corrChart"></canvas></div>`
+                },
+                reg: {
+                    title: '迴歸分析',
+                    content: `<p class="mb-2">用於分析一個依變數(Y)與一個或多個自變數(X)之間的關係，並可找出其顯著性以預測未來變動。例如，家庭所得(X)如何影響醫療支出(Y)。</p>
+                              <div class="chart-container"><canvas id="regChart"></canvas></div>
+                              <div class="text-center mt-4"><button id="toggle-reg-line" class="bg-[#AD8B73] text-white px-4 py-2 rounded-lg text-sm">顯示/隱藏迴歸線</button></div>`
+                }
+            };
+
+            function switchTab(tabId) {
+                tabBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tabId));
+                const data = statsData[tabId];
+                statsContent.innerHTML = `<h3 class="font-bold text-xl mb-3">${data.title}</h3>${data.content}`;
+
+                if (tabId === 'corr' || tabId === 'reg') {
+                     setTimeout(() => createScatterPlot(tabId), 50);
+                }
+            }
+            
+            function createScatterPlot(type) {
+                const canvasId = type === 'corr' ? 'corrChart' : 'regChart';
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                
+                const scatterData = {
+                    labels: '家庭所得(萬)',
+                    datasets: [{
+                        label: '家庭醫療支出(萬)',
+                        data: [{x:30,y:2},{x:40,y:2.5},{x:50,y:3.5},{x:60,y:4},{x:70,y:3.8},{x:80,y:5},{x:90,y:6},{x:100,y:5.5},{x:120,y:7},{x:150,y:8}],
+                        backgroundColor: 'rgba(224, 167, 94, 0.7)'
+                    }]
+                };
+
+                const regressionLine = {
+                    label: '迴歸線',
+                    data: [{x:30, y:2.1}, {x:150, y:7.5}],
+                    borderColor: 'rgb(115, 95, 50)',
+                    backgroundColor: 'rgb(115, 95, 50)',
+                    type: 'line',
+                    fill: false,
+                    showLine: true,
+                    hidden: type === 'corr' // Initially hidden for regression chart
+                };
+                
+                if (type === 'reg') {
+                    scatterData.datasets.push(regressionLine);
+                }
+
+                new Chart(ctx, {
+                    type: 'scatter',
+                    data: scatterData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { x: { title: { display: true, text: '家庭年所得 (萬)' }}, y: { title: { display: true, text: '家庭年醫療支出 (萬)' }}}
+                    }
+                });
+
+                if (type === 'reg') {
+                    const toggleBtn = document.getElementById('toggle-reg-line');
+                    toggleBtn.onclick = () => {
+                        const chart = Chart.getChart(canvasId);
+                        const lineDataset = chart.data.datasets[1];
+                        lineDataset.hidden = !lineDataset.hidden;
+                        chart.update();
+                    };
+                }
+            }
+
+
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    switchTab(e.target.dataset.tab);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
